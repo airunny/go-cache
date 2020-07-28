@@ -23,7 +23,7 @@ func (s *Redis) Set(_ context.Context, key string, value []byte, expiration time
 	return s.cli.Set(key, value, expiration).Err()
 }
 
-func (s *Redis) Get(ctx context.Context, key string) ([]byte, error) {
+func (s *Redis) Get(_ context.Context, key string) ([]byte, error) {
 	value, err := s.cli.Get(key).Bytes()
 	if err != nil {
 		if err == redis.Nil {

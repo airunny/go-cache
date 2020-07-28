@@ -4,20 +4,26 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"reflect"
+	"strconv"
 	"time"
 
 	"github.com/golang/groupcache/singleflight"
 	"github.com/golang/protobuf/proto"
 
 	"github.com/liyanbing/go-cache/errors"
+	"github.com/liyanbing/go-cache/tools"
 )
 
-type Cache interface {
-	Set(ctx context.Context, key string, value []byte, expiration time.Duration) error
-	Get(ctx context.Context, key string) ([]byte, error)
-}
+/**
+ * 在具体的获取数据操作(fetcher)前加一层缓存操作
+ * 1、先根据key从cache中获取数据，如果不存在则从fetcher中获取数据（并发调用时只会有一个请求会调用fetcher,其他请求会复用这个请求返回的数据）
+ * 2、从fetcher获取到数据之后然后存储到cache中,然后返回从fetcher获取到的对象
+ * 3、如果cache中存在数据，则decode进model对象中返回（注意这时候返回的是model的指针）
+ * 注意：如果对象在缓存中存在则一定返回的是对象指针，如果不存在返回的是fetcher返回的数据(为了统一fetcher最好也返回对象的指针)
+ */
 
 var (
 	single = &singleflight.Group{}
@@ -25,9 +31,10 @@ var (
 
 type Fetcher func() (interface{}, error)
 
-type Encoder func(interface{}) ([]byte, error)
-
-type Decoder func(value []byte, model reflect.Type) (interface{}, error)
+type Cache interface {
+	Set(ctx context.Context, key string, value []byte, expiration time.Duration) error
+	Get(ctx context.Context, key string) ([]byte, error)
+}
 
 func FetchWithJson(ctx context.Context, cache Cache, key string, expire time.Duration, fetcher Fetcher, model interface{}) (interface{}, error) {
 	return fetch(ctx, cache, key, expire, fetcher, typeFromModel(model), jsonEncode, jsonDecode)
@@ -53,6 +60,42 @@ func FetchWithProtobuf(ctx context.Context, cache Cache, key string, expire time
 	return value.(proto.Message), nil
 }
 
+func FetchWithNumber(ctx context.Context, cache Cache, key string, expire time.Duration, fetcher Fetcher) (float64, error) {
+	value, err := fetch(ctx, cache, key, expire, fetcher, nil, func(i interface{}) ([]byte, error) {
+		if !tools.IsNumber(i) {
+			return nil, errors.ErrInvalidValue
+		}
+		return []byte(fmt.Sprintf("%v", i)), nil
+	}, func(value []byte, _ reflect.Type) (interface{}, error) {
+		return strconv.ParseFloat(string(value), 64)
+	})
+	if err != nil {
+		return 0, err
+	}
+	return tools.ToFloat(value)
+}
+
+func FetchWithArray(ctx context.Context, cache Cache, key string, expire time.Duration, fetcher Fetcher, model interface{}) (interface{}, error) {
+	return fetch(ctx, cache, key, expire, fetcher, typeFromModel(model), func(i interface{}) ([]byte, error) {
+		kind := reflect.TypeOf(i).Kind()
+		if kind != reflect.Slice && kind != reflect.Array {
+			return nil, errors.ErrInvalidValue
+		}
+		return jsonEncode(i)
+	}, func(value []byte, m reflect.Type) (interface{}, error) {
+		ret := reflect.New(reflect.MakeSlice(m, 0, 0).Type())
+		err := json.Unmarshal(value, ret.Interface())
+		if err != nil {
+			return nil, err
+		}
+		return ret.Elem().Interface(), nil
+	})
+}
+
+type encoder func(interface{}) ([]byte, error)
+
+type decoder func(value []byte, model reflect.Type) (interface{}, error)
+
 func fetch(
 	ctx context.Context,
 	cache Cache,
@@ -60,8 +103,8 @@ func fetch(
 	expire time.Duration,
 	fetcher Fetcher,
 	model reflect.Type,
-	encoder Encoder,
-	decoder Decoder) (interface{}, error) {
+	e encoder,
+	d decoder) (interface{}, error) {
 
 	do := func() (interface{}, error) {
 		return single.Do(key, func() (interface{}, error) {
@@ -70,7 +113,7 @@ func fetch(
 				return nil, err
 			}
 
-			cacheData, err := encoder(value)
+			cacheData, err := e(value)
 			if err != nil {
 				return nil, err
 			}
@@ -96,7 +139,7 @@ func fetch(
 	if err == errors.ErrEmptyCache {
 		return do()
 	}
-	return decoder(cacheData, model)
+	return d(cacheData, model)
 }
 
 func typeFromModel(model interface{}) reflect.Type {
@@ -117,7 +160,11 @@ func protoDecode(data []byte, model reflect.Type) (interface{}, error) {
 }
 
 func protoEncode(value interface{}) ([]byte, error) {
-	return proto.Marshal(value.(proto.Message))
+	mes, ok := value.(proto.Message)
+	if !ok {
+		return nil, errors.ErrInvalidValue
+	}
+	return proto.Marshal(mes)
 }
 
 func jsonDecode(value []byte, model reflect.Type) (interface{}, error) {
