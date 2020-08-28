@@ -35,7 +35,7 @@ func TestFetchWithJson(t *testing.T) {
 	ctx := context.Background()
 
 	cnt := int32(0)
-	fetchFunc := func() (*TempModel, error) {
+	fetchFunc := func() (interface{}, error) {
 		atomic.AddInt32(&cnt, 1)
 		return &TempModel{
 			Name: "peter",

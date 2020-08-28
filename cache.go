@@ -37,13 +37,13 @@ type Cache interface {
 }
 
 func FetchWithJson(ctx context.Context, cache Cache, key string, expire time.Duration, fetcher Fetcher, model interface{}) (interface{}, error) {
-	return fetch(ctx, cache, key, expire, fetcher, typeFromModel(model), jsonEncode, jsonDecode)
+	return fetch(ctx, cache, key, expire, fetcher, jsonEncode, jsonDecode(model))
 }
 
 func FetchWithString(ctx context.Context, cache Cache, key string, expire time.Duration, fetcher Fetcher) (string, error) {
-	value, err := fetch(ctx, cache, key, expire, fetcher, nil, func(input interface{}) ([]byte, error) {
+	value, err := fetch(ctx, cache, key, expire, fetcher, func(input interface{}) ([]byte, error) {
 		return []byte(input.(string)), nil
-	}, func(value []byte, _ reflect.Type) (interface{}, error) {
+	}, func(value []byte) (interface{}, error) {
 		return string(value), nil
 	})
 	if err != nil {
@@ -53,7 +53,7 @@ func FetchWithString(ctx context.Context, cache Cache, key string, expire time.D
 }
 
 func FetchWithProtobuf(ctx context.Context, cache Cache, key string, expire time.Duration, fetcher Fetcher, model interface{}) (proto.Message, error) {
-	value, err := fetch(ctx, cache, key, expire, fetcher, typeFromModel(model), protoEncode, protoDecode)
+	value, err := fetch(ctx, cache, key, expire, fetcher, protoEncode, protoDecode(model))
 	if err != nil {
 		return nil, err
 	}
@@ -61,12 +61,12 @@ func FetchWithProtobuf(ctx context.Context, cache Cache, key string, expire time
 }
 
 func FetchWithNumber(ctx context.Context, cache Cache, key string, expire time.Duration, fetcher Fetcher) (float64, error) {
-	value, err := fetch(ctx, cache, key, expire, fetcher, nil, func(i interface{}) ([]byte, error) {
+	value, err := fetch(ctx, cache, key, expire, fetcher, func(i interface{}) ([]byte, error) {
 		if !tools.IsNumber(i) {
 			return nil, errors.ErrInvalidValue
 		}
 		return []byte(fmt.Sprintf("%v", i)), nil
-	}, func(value []byte, _ reflect.Type) (interface{}, error) {
+	}, func(value []byte) (interface{}, error) {
 		return strconv.ParseFloat(string(value), 64)
 	})
 	if err != nil {
@@ -76,14 +76,14 @@ func FetchWithNumber(ctx context.Context, cache Cache, key string, expire time.D
 }
 
 func FetchWithArray(ctx context.Context, cache Cache, key string, expire time.Duration, fetcher Fetcher, model interface{}) (interface{}, error) {
-	return fetch(ctx, cache, key, expire, fetcher, typeFromModel(model), func(i interface{}) ([]byte, error) {
+	return fetch(ctx, cache, key, expire, fetcher, func(i interface{}) ([]byte, error) {
 		kind := reflect.TypeOf(i).Kind()
 		if kind != reflect.Slice && kind != reflect.Array {
 			return nil, errors.ErrInvalidValue
 		}
 		return jsonEncode(i)
-	}, func(value []byte, m reflect.Type) (interface{}, error) {
-		ret := reflect.New(reflect.MakeSlice(m, 0, 0).Type())
+	}, func(value []byte) (interface{}, error) {
+		ret := reflect.New(reflect.MakeSlice(typeFromModel(model), 0, 0).Type())
 		err := json.Unmarshal(value, ret.Interface())
 		if err != nil {
 			return nil, err
@@ -94,7 +94,7 @@ func FetchWithArray(ctx context.Context, cache Cache, key string, expire time.Du
 
 type encoder func(interface{}) ([]byte, error)
 
-type decoder func(value []byte, model reflect.Type) (interface{}, error)
+type decoder func(value []byte) (interface{}, error)
 
 func fetch(
 	ctx context.Context,
@@ -102,7 +102,6 @@ func fetch(
 	key string,
 	expire time.Duration,
 	fetcher Fetcher,
-	model reflect.Type,
 	e encoder,
 	d decoder) (interface{}, error) {
 
@@ -139,7 +138,7 @@ func fetch(
 	if err == errors.ErrEmptyCache {
 		return do()
 	}
-	return d(cacheData, model)
+	return d(cacheData)
 }
 
 func typeFromModel(model interface{}) reflect.Type {
@@ -150,13 +149,15 @@ func typeFromModel(model interface{}) reflect.Type {
 	return typ
 }
 
-func protoDecode(data []byte, model reflect.Type) (interface{}, error) {
-	ret := reflect.New(model)
-	err := proto.Unmarshal(data, ret.Interface().(proto.Message))
-	if err != nil {
-		return nil, err
+func protoDecode(model interface{}) decoder {
+	return func(data []byte) (interface{}, error) {
+		ret := reflect.New(typeFromModel(model))
+		err := proto.Unmarshal(data, ret.Interface().(proto.Message))
+		if err != nil {
+			return nil, err
+		}
+		return ret.Interface(), nil
 	}
-	return ret.Interface(), nil
 }
 
 func protoEncode(value interface{}) ([]byte, error) {
@@ -167,13 +168,15 @@ func protoEncode(value interface{}) ([]byte, error) {
 	return proto.Marshal(mes)
 }
 
-func jsonDecode(value []byte, model reflect.Type) (interface{}, error) {
-	ret := reflect.New(model)
-	err := json.NewDecoder(bytes.NewBuffer(value)).Decode(ret.Interface())
-	if err != nil {
-		return nil, err
+func jsonDecode(model interface{}) decoder {
+	return func(value []byte) (interface{}, error) {
+		ret := reflect.New(typeFromModel(model))
+		err := json.NewDecoder(bytes.NewBuffer(value)).Decode(ret.Interface())
+		if err != nil {
+			return nil, err
+		}
+		return ret.Interface(), nil
 	}
-	return ret.Interface(), nil
 }
 
 func jsonEncode(value interface{}) ([]byte, error) {
