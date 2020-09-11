@@ -1,11 +1,8 @@
 package go_cache
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"log"
 	"reflect"
 	"strconv"
 	"time"
@@ -15,6 +12,8 @@ import (
 
 	"github.com/liyanbing/go-cache/errors"
 	"github.com/liyanbing/go-cache/tools"
+
+	jsonIter "github.com/json-iterator/go"
 )
 
 /**
@@ -27,6 +26,7 @@ import (
 
 var (
 	single = &singleflight.Group{}
+	json   = jsonIter.ConfigCompatibleWithStandardLibrary
 )
 
 type Fetcher func() (interface{}, error)
@@ -90,95 +90,4 @@ func FetchWithArray(ctx context.Context, cache Cache, key string, expire time.Du
 		}
 		return ret.Elem().Interface(), nil
 	})
-}
-
-type encoder func(interface{}) ([]byte, error)
-
-type decoder func(value []byte) (interface{}, error)
-
-func fetch(
-	ctx context.Context,
-	cache Cache,
-	key string,
-	expire time.Duration,
-	fetcher Fetcher,
-	e encoder,
-	d decoder) (interface{}, error) {
-
-	do := func() (interface{}, error) {
-		return single.Do(key, func() (interface{}, error) {
-			value, err := fetcher()
-			if err != nil {
-				return nil, err
-			}
-
-			cacheData, err := e(value)
-			if err != nil {
-				return nil, err
-			}
-
-			err = cache.Set(ctx, key, cacheData, expire)
-			if err != nil {
-				log.Printf("set cache <%v,%v> Err:%v", key, value, err)
-				err = nil
-			}
-			return value, nil
-		})
-	}
-
-	if noUseCache(ctx) {
-		return do()
-	}
-
-	cacheData, err := cache.Get(ctx, key)
-	if err != nil && err != errors.ErrEmptyCache {
-		return nil, err
-	}
-
-	if err == errors.ErrEmptyCache {
-		return do()
-	}
-	return d(cacheData)
-}
-
-func typeFromModel(model interface{}) reflect.Type {
-	typ := reflect.TypeOf(model)
-	if typ.Kind() == reflect.Ptr {
-		typ = typ.Elem()
-	}
-	return typ
-}
-
-func protoDecode(model interface{}) decoder {
-	return func(data []byte) (interface{}, error) {
-		ret := reflect.New(typeFromModel(model))
-		err := proto.Unmarshal(data, ret.Interface().(proto.Message))
-		if err != nil {
-			return nil, err
-		}
-		return ret.Interface(), nil
-	}
-}
-
-func protoEncode(value interface{}) ([]byte, error) {
-	mes, ok := value.(proto.Message)
-	if !ok {
-		return nil, errors.ErrInvalidValue
-	}
-	return proto.Marshal(mes)
-}
-
-func jsonDecode(model interface{}) decoder {
-	return func(value []byte) (interface{}, error) {
-		ret := reflect.New(typeFromModel(model))
-		err := json.NewDecoder(bytes.NewBuffer(value)).Decode(ret.Interface())
-		if err != nil {
-			return nil, err
-		}
-		return ret.Interface(), nil
-	}
-}
-
-func jsonEncode(value interface{}) ([]byte, error) {
-	return json.Marshal(value)
 }
