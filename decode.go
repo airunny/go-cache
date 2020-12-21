@@ -7,7 +7,7 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-type decoder func(value []byte) (interface{}, error)
+type decoder func([]byte) (interface{}, error)
 
 func typeFromModel(model interface{}) reflect.Type {
 	typ := reflect.TypeOf(model)
@@ -29,9 +29,9 @@ func protoDecode(model interface{}) decoder {
 }
 
 func jsonDecode(model interface{}) decoder {
-	return func(value []byte) (interface{}, error) {
+	return func(data []byte) (interface{}, error) {
 		ret := reflect.New(typeFromModel(model))
-		err := json.NewDecoder(bytes.NewBuffer(value)).Decode(ret.Interface())
+		err := json.NewDecoder(bytes.NewBuffer(data)).Decode(ret.Interface())
 		if err != nil {
 			return nil, err
 		}

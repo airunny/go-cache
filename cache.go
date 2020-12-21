@@ -32,7 +32,7 @@ var (
 type Fetcher func() (interface{}, error)
 
 type Cache interface {
-	Set(ctx context.Context, key string, value []byte, expiration time.Duration) error
+	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error
 	Get(ctx context.Context, key string) ([]byte, error)
 }
 
@@ -42,7 +42,11 @@ func FetchWithJson(ctx context.Context, cache Cache, key string, expire time.Dur
 
 func FetchWithString(ctx context.Context, cache Cache, key string, expire time.Duration, fetcher Fetcher) (string, error) {
 	value, err := fetch(ctx, cache, key, expire, fetcher, func(input interface{}) ([]byte, error) {
-		return []byte(input.(string)), nil
+		tep,ok  :=input.(string)
+		if !ok {
+			return nil,errors.ErrInvalidValue
+		}
+		return []byte(tep), nil
 	}, func(value []byte) (interface{}, error) {
 		return string(value), nil
 	})

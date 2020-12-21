@@ -19,7 +19,7 @@ func NewLRU(max int) *LRU {
 	}
 }
 
-func (s *LRU) Set(_ context.Context, key string, value []byte, expiration time.Duration) error {
+func (s *LRU) Set(_ context.Context, key string, value interface{}, expiration time.Duration) error {
 	s.cache.Add(lru.Key(key), value)
 	return nil
 }

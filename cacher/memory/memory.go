@@ -17,7 +17,7 @@ func NewMemoryCache(max int32) *Memory {
 }
 
 type entry struct {
-	value  []byte
+	value interface{}
 	expire int64
 }
 
@@ -28,7 +28,7 @@ type Memory struct {
 	entriesNum int32
 }
 
-func (m *Memory) Set(_ context.Context, key string, value []byte, expiration time.Duration) error {
+func (m *Memory) Set(_ context.Context, key string, value interface{}, expiration time.Duration) error {
 	entriesNum := atomic.LoadInt32(&m.entriesNum)
 	if m.MaxEntries > 0 && m.MaxEntries <= entriesNum {
 		return nil
@@ -51,7 +51,7 @@ func (m *Memory) Get(_ context.Context, key string) ([]byte, error) {
 	if m.checkAndDelete(key, value) {
 		return nil, errors.ErrEmptyCache
 	}
-	return value.(*entry).value, nil
+	return value.(*entry).value.([]byte), nil
 }
 
 func (m *Memory) checkAndDelete(key string, value interface{}) bool {

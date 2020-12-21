@@ -19,7 +19,7 @@ type Redis struct {
 	cli *redis.Client
 }
 
-func (s *Redis) Set(_ context.Context, key string, value []byte, expiration time.Duration) error {
+func (s *Redis) Set(_ context.Context, key string, value interface{}, expiration time.Duration) error {
 	return s.cli.Set(key, value, expiration).Err()
 }
 
