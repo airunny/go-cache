@@ -34,6 +34,7 @@ type Fetcher func() (interface{}, error)
 type Cache interface {
 	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error
 	Get(ctx context.Context, key string) ([]byte, error)
+	Remove(ctx context.Context, key string) error
 }
 
 func FetchWithJson(ctx context.Context, cache Cache, key string, expire time.Duration, fetcher Fetcher, model interface{}) (interface{}, error) {
@@ -42,9 +43,9 @@ func FetchWithJson(ctx context.Context, cache Cache, key string, expire time.Dur
 
 func FetchWithString(ctx context.Context, cache Cache, key string, expire time.Duration, fetcher Fetcher) (string, error) {
 	value, err := fetch(ctx, cache, key, expire, fetcher, func(input interface{}) ([]byte, error) {
-		tep,ok  :=input.(string)
+		tep, ok := input.(string)
 		if !ok {
-			return nil,errors.ErrInvalidValue
+			return nil, errors.ErrInvalidValue
 		}
 		return []byte(tep), nil
 	}, func(value []byte) (interface{}, error) {

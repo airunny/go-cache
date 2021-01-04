@@ -33,3 +33,7 @@ func (s *Redis) Get(_ context.Context, key string) ([]byte, error) {
 	}
 	return value, nil
 }
+
+func (s *Redis) Remove(_ context.Context, key string) error {
+	return s.cli.Del(key).Err()
+}

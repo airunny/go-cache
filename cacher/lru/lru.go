@@ -31,3 +31,8 @@ func (s *LRU) Get(_ context.Context, key string) ([]byte, error) {
 	}
 	return value.([]byte), nil
 }
+
+func (s *LRU) Remove(_ context.Context, key string) error {
+	s.cache.Remove(lru.Key(key))
+	return nil
+}
