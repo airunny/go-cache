@@ -9,7 +9,6 @@ import (
 
 	"github.com/golang/groupcache/singleflight"
 	"github.com/golang/protobuf/proto"
-
 	"github.com/liyanbing/go-cache/errors"
 	"github.com/liyanbing/go-cache/tools"
 
@@ -32,8 +31,13 @@ var (
 type Fetcher func() (interface{}, error)
 
 type Cache interface {
-	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error
+	// set global namespace
+	SetNamespace(namespace string)
+	// set value off key; auto delete from cache after expiration time
+	Set(ctx context.Context, key string, value []byte, expiration time.Duration) error
+	// get value off key , return errors.ErrEmptyCache if not found key from cache
 	Get(ctx context.Context, key string) ([]byte, error)
+	// remove value by key
 	Remove(ctx context.Context, key string) error
 }
 

@@ -11,7 +11,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 
-	redis2 "github.com/liyanbing/go-cache/cacher/redis"
+	redisCache "github.com/liyanbing/go-cache/cacher/redis"
 	redis "gopkg.in/redis.v5"
 )
 
@@ -23,7 +23,8 @@ func TestMain(m *testing.M) {
 		Addr: "127.0.0.1:6379",
 		DB:   0,
 	})
-	cache = redis2.NewRedisCache(redisCli)
+	cache = redisCache.NewRedisCache(redisCli)
+	cache.SetNamespace("test")
 
 	// memory
 	//cache = memory.NewMemoryCache(10)

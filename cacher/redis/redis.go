@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/liyanbing/go-cache/errors"
@@ -16,14 +17,28 @@ func NewRedisCache(cli *redis.Client) *Redis {
 }
 
 type Redis struct {
-	cli *redis.Client
+	cli       *redis.Client
+	namespace string
 }
 
-func (s *Redis) Set(_ context.Context, key string, value interface{}, expiration time.Duration) error {
+func (s *Redis) SetNamespace(namespace string) {
+	s.namespace = namespace
+}
+
+func (s *Redis) namespaceKey(key string) string {
+	if s.namespace == "" {
+		return key
+	}
+	return fmt.Sprintf("%v:%v", s.namespace, key)
+}
+
+func (s *Redis) Set(_ context.Context, key string, value []byte, expiration time.Duration) error {
+	key = s.namespaceKey(key)
 	return s.cli.Set(key, value, expiration).Err()
 }
 
 func (s *Redis) Get(_ context.Context, key string) ([]byte, error) {
+	key = s.namespaceKey(key)
 	value, err := s.cli.Get(key).Bytes()
 	if err != nil {
 		if err == redis.Nil {
@@ -35,5 +50,6 @@ func (s *Redis) Get(_ context.Context, key string) ([]byte, error) {
 }
 
 func (s *Redis) Remove(_ context.Context, key string) error {
+	key = s.namespaceKey(key)
 	return s.cli.Del(key).Err()
 }

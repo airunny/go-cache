@@ -8,9 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/liyanbing/go-cache/errors"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewMemoryCache(t *testing.T) {

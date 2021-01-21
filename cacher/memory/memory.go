@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -26,9 +27,22 @@ type Memory struct {
 	quit       chan struct{}
 	MaxEntries int32
 	entriesNum int32
+	namespace  string
 }
 
-func (m *Memory) Set(_ context.Context, key string, value interface{}, expiration time.Duration) error {
+func (m *Memory) SetNamespace(namespace string) {
+	m.namespace = namespace
+}
+
+func (m *Memory) namespaceKey(key string) string {
+	if m.namespace == "" {
+		return key
+	}
+	return fmt.Sprintf("%v:%v", m.namespace, key)
+}
+
+func (m *Memory) Set(_ context.Context, key string, value []byte, expiration time.Duration) error {
+	key = m.namespaceKey(key)
 	entriesNum := atomic.LoadInt32(&m.entriesNum)
 	if m.MaxEntries > 0 && m.MaxEntries <= entriesNum {
 		return nil
@@ -43,6 +57,7 @@ func (m *Memory) Set(_ context.Context, key string, value interface{}, expiratio
 }
 
 func (m *Memory) Get(_ context.Context, key string) ([]byte, error) {
+	key = m.namespaceKey(key)
 	value, ok := m.cache.Load(key)
 	if !ok {
 		return nil, errors.ErrEmptyCache
@@ -55,6 +70,7 @@ func (m *Memory) Get(_ context.Context, key string) ([]byte, error) {
 }
 
 func (m *Memory) Remove(_ context.Context, key string) error {
+	key = m.namespaceKey(key)
 	m.cache.Delete(key)
 	if m.MaxEntries > 0 {
 		atomic.AddInt32(&m.entriesNum, -1)
@@ -63,6 +79,7 @@ func (m *Memory) Remove(_ context.Context, key string) error {
 }
 
 func (m *Memory) checkAndDelete(key string, value interface{}) bool {
+	key = m.namespaceKey(key)
 	data := value.(*entry)
 	if time.Now().UnixNano() > data.expire {
 		m.cache.Delete(key)
