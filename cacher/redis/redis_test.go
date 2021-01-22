@@ -22,13 +22,13 @@ func TestNewRedisCache(t *testing.T) {
 	cache.SetNamespace("test")
 
 	// set name
-	err := cache.Set(context.Background(), "name", []byte("value"), time.Second)
+	err := cache.Set(context.Background(), "name", "value", time.Second)
 	assert.Nil(t, err)
 
 	// get name
 	value, err := cache.Get(context.Background(), "name")
 	assert.Nil(t, err)
-	assert.Equal(t, "value", string(value))
+	assert.Equal(t, []byte("value"), value)
 
 	time.Sleep(time.Second)
 
@@ -38,13 +38,13 @@ func TestNewRedisCache(t *testing.T) {
 	assert.Nil(t, value)
 
 	// set name again
-	err = cache.Set(context.Background(), "name", []byte("value"), time.Second)
+	err = cache.Set(context.Background(), "name", "value", time.Second)
 	assert.Nil(t, err)
 
 	// get name again
 	value, err = cache.Get(context.Background(), "name")
 	assert.Nil(t, err)
-	assert.Equal(t, "value", string(value))
+	assert.Equal(t, []byte("value"), value)
 
 	// remove
 	err = cache.Remove(context.Background(), "name")

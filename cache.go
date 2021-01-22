@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strconv"
 	"time"
 
 	"github.com/golang/groupcache/singleflight"
@@ -34,9 +33,9 @@ type Cache interface {
 	// set global namespace
 	SetNamespace(namespace string)
 	// set value off key; auto delete from cache after expiration time
-	Set(ctx context.Context, key string, value []byte, expiration time.Duration) error
+	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error
 	// get value off key , return errors.ErrEmptyCache if not found key from cache
-	Get(ctx context.Context, key string) ([]byte, error)
+	Get(ctx context.Context, key string) (interface{}, error)
 	// remove value by key
 	Remove(ctx context.Context, key string) error
 }
@@ -47,13 +46,16 @@ func FetchWithJson(ctx context.Context, cache Cache, key string, expire time.Dur
 
 func FetchWithString(ctx context.Context, cache Cache, key string, expire time.Duration, fetcher Fetcher) (string, error) {
 	value, err := fetch(ctx, cache, key, expire, fetcher, func(input interface{}) ([]byte, error) {
-		tep, ok := input.(string)
-		if !ok {
-			return nil, errors.ErrInvalidValue
+		var data []byte
+		switch input.(type) {
+		case string:
+			data = []byte(input.(string))
+		case []byte:
+			data = input.([]byte)
 		}
-		return []byte(tep), nil
-	}, func(value []byte) (interface{}, error) {
-		return string(value), nil
+		return data, nil
+	}, func(value interface{}) (interface{}, error) {
+		return tools.ToString(value)
 	})
 	if err != nil {
 		return "", err
@@ -71,12 +73,12 @@ func FetchWithProtobuf(ctx context.Context, cache Cache, key string, expire time
 
 func FetchWithNumber(ctx context.Context, cache Cache, key string, expire time.Duration, fetcher Fetcher) (float64, error) {
 	value, err := fetch(ctx, cache, key, expire, fetcher, func(i interface{}) ([]byte, error) {
-		if !tools.IsNumber(i) {
+		if !tools.CanConvertToNumber(i) {
 			return nil, errors.ErrInvalidValue
 		}
 		return []byte(fmt.Sprintf("%v", i)), nil
-	}, func(value []byte) (interface{}, error) {
-		return strconv.ParseFloat(string(value), 64)
+	}, func(value interface{}) (interface{}, error) {
+		return value, nil
 	})
 	if err != nil {
 		return 0, err
@@ -91,9 +93,14 @@ func FetchWithArray(ctx context.Context, cache Cache, key string, expire time.Du
 			return nil, errors.ErrInvalidValue
 		}
 		return jsonEncode(i)
-	}, func(value []byte) (interface{}, error) {
+	}, func(value interface{}) (interface{}, error) {
+		dataValue, ok := value.([]byte)
+		if !ok {
+			return nil, errors.ErrInvalidCacheValue
+		}
+
 		ret := reflect.New(reflect.MakeSlice(typeFromModel(model), 0, 0).Type())
-		err := json.Unmarshal(value, ret.Interface())
+		err := json.Unmarshal(dataValue, ret.Interface())
 		if err != nil {
 			return nil, err
 		}

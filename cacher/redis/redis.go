@@ -32,12 +32,12 @@ func (s *Redis) namespaceKey(key string) string {
 	return fmt.Sprintf("%v:%v", s.namespace, key)
 }
 
-func (s *Redis) Set(_ context.Context, key string, value []byte, expiration time.Duration) error {
+func (s *Redis) Set(_ context.Context, key string, value interface{}, expiration time.Duration) error {
 	key = s.namespaceKey(key)
 	return s.cli.Set(key, value, expiration).Err()
 }
 
-func (s *Redis) Get(_ context.Context, key string) ([]byte, error) {
+func (s *Redis) Get(_ context.Context, key string) (interface{}, error) {
 	key = s.namespaceKey(key)
 	value, err := s.cli.Get(key).Bytes()
 	if err != nil {

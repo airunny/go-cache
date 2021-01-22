@@ -1,15 +1,23 @@
 package tools
 
 import (
+	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"github.com/liyanbing/go-cache/errors"
 )
 
-func IsNumber(in interface{}) bool {
+func CanConvertToNumber(in interface{}) bool {
 	switch in.(type) {
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
 		return true
+	case string:
+		_, err := strconv.ParseFloat(in.(string), 64)
+		return err == nil
+	case []byte:
+		_, err := strconv.ParseFloat(string(in.([]byte)), 64)
+		return err == nil
 	}
 	return false
 }
@@ -42,6 +50,30 @@ func ToFloat(input interface{}) (float64, error) {
 		return input.(float64), nil
 	case string:
 		return strconv.ParseFloat(input.(string), 64)
+	case []byte:
+		return strconv.ParseFloat(string(input.([]byte)), 64)
 	}
 	return 0, errors.ErrInvalidValue
+}
+
+func ToString(input interface{}) (string, error) {
+	switch input.(type) {
+	case string:
+		return input.(string), nil
+	case []byte:
+		return string(input.([]byte)), nil
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+		return fmt.Sprintf("%v", input), nil
+	case bool:
+		if input.(bool) {
+			return "1", nil
+		}
+		return "0", nil
+	default:
+		value, err := json.Marshal(input)
+		if err != nil {
+			return "", err
+		}
+		return string(value), nil
+	}
 }

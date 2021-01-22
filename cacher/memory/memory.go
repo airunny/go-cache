@@ -41,7 +41,7 @@ func (m *Memory) namespaceKey(key string) string {
 	return fmt.Sprintf("%v:%v", m.namespace, key)
 }
 
-func (m *Memory) Set(_ context.Context, key string, value []byte, expiration time.Duration) error {
+func (m *Memory) Set(_ context.Context, key string, value interface{}, expiration time.Duration) error {
 	key = m.namespaceKey(key)
 	entriesNum := atomic.LoadInt32(&m.entriesNum)
 	if m.MaxEntries > 0 && m.MaxEntries <= entriesNum {
@@ -56,7 +56,7 @@ func (m *Memory) Set(_ context.Context, key string, value []byte, expiration tim
 	return nil
 }
 
-func (m *Memory) Get(_ context.Context, key string) ([]byte, error) {
+func (m *Memory) Get(_ context.Context, key string) (interface{}, error) {
 	key = m.namespaceKey(key)
 	value, ok := m.cache.Load(key)
 	if !ok {
@@ -66,7 +66,7 @@ func (m *Memory) Get(_ context.Context, key string) ([]byte, error) {
 	if m.checkAndDelete(key, value) {
 		return nil, errors.ErrEmptyCache
 	}
-	return value.(*entry).value.([]byte), nil
+	return value.(*entry).value, nil
 }
 
 func (m *Memory) Remove(_ context.Context, key string) error {

@@ -31,19 +31,19 @@ func (s *LRU) namespaceKey(key string) string {
 	return fmt.Sprintf("%v:%v", s.namespace, key)
 }
 
-func (s *LRU) Set(_ context.Context, key string, value []byte, expiration time.Duration) error {
+func (s *LRU) Set(_ context.Context, key string, value interface{}, expiration time.Duration) error {
 	key = s.namespaceKey(key)
 	s.cache.Add(lru.Key(key), value)
 	return nil
 }
 
-func (s *LRU) Get(_ context.Context, key string) ([]byte, error) {
+func (s *LRU) Get(_ context.Context, key string) (interface{}, error) {
 	key = s.namespaceKey(key)
 	value, ok := s.cache.Get(lru.Key(key))
 	if !ok {
 		return nil, errors.ErrEmptyCache
 	}
-	return value.([]byte), nil
+	return value, nil
 }
 
 func (s *LRU) Remove(_ context.Context, key string) error {

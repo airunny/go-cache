@@ -5,9 +5,10 @@ import (
 	"reflect"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/liyanbing/go-cache/errors"
 )
 
-type decoder func([]byte) (interface{}, error)
+type decoder func(interface{}) (interface{}, error)
 
 func typeFromModel(model interface{}) reflect.Type {
 	typ := reflect.TypeOf(model)
@@ -18,9 +19,19 @@ func typeFromModel(model interface{}) reflect.Type {
 }
 
 func protoDecode(model interface{}) decoder {
-	return func(data []byte) (interface{}, error) {
+	return func(data interface{}) (interface{}, error) {
+		var byteData []byte
+		switch data.(type) {
+		case []byte:
+			byteData = data.([]byte)
+		case string:
+			byteData = []byte(data.(string))
+		default:
+			return nil, errors.ErrInvalidCacheValue
+		}
+
 		ret := reflect.New(typeFromModel(model))
-		err := proto.Unmarshal(data, ret.Interface().(proto.Message))
+		err := proto.Unmarshal(byteData, ret.Interface().(proto.Message))
 		if err != nil {
 			return nil, err
 		}
@@ -29,9 +40,19 @@ func protoDecode(model interface{}) decoder {
 }
 
 func jsonDecode(model interface{}) decoder {
-	return func(data []byte) (interface{}, error) {
+	return func(data interface{}) (interface{}, error) {
+		var byteData []byte
+		switch data.(type) {
+		case []byte:
+			byteData = data.([]byte)
+		case string:
+			byteData = []byte(data.(string))
+		default:
+			return nil, errors.ErrInvalidCacheValue
+		}
+
 		ret := reflect.New(typeFromModel(model))
-		err := json.NewDecoder(bytes.NewBuffer(data)).Decode(ret.Interface())
+		err := json.NewDecoder(bytes.NewBuffer(byteData)).Decode(ret.Interface())
 		if err != nil {
 			return nil, err
 		}
