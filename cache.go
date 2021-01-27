@@ -27,7 +27,12 @@ var (
 	json   = jsonIter.ConfigCompatibleWithStandardLibrary
 )
 
-type Fetcher func() (interface{}, error)
+/**
+ * value: 需要存储在缓存中的值
+ * expiration: value 过期时间
+ * err：错误
+ */
+type Fetcher func() (value interface{}, expiration time.Duration, err error)
 
 type Cache interface {
 	// set global namespace
@@ -40,12 +45,12 @@ type Cache interface {
 	Remove(ctx context.Context, key string) error
 }
 
-func FetchWithJson(ctx context.Context, cache Cache, key string, expire time.Duration, fetcher Fetcher, model interface{}) (interface{}, error) {
-	return fetch(ctx, cache, key, expire, fetcher, jsonEncode, jsonDecode(model))
+func FetchWithJson(ctx context.Context, cache Cache, key string, fetcher Fetcher, model interface{}) (interface{}, error) {
+	return fetch(ctx, cache, key, fetcher, jsonEncode, jsonDecode(model))
 }
 
-func FetchWithString(ctx context.Context, cache Cache, key string, expire time.Duration, fetcher Fetcher) (string, error) {
-	value, err := fetch(ctx, cache, key, expire, fetcher, func(input interface{}) ([]byte, error) {
+func FetchWithString(ctx context.Context, cache Cache, key string, fetcher Fetcher) (string, error) {
+	value, err := fetch(ctx, cache, key, fetcher, func(input interface{}) ([]byte, error) {
 		var data []byte
 		switch input.(type) {
 		case string:
@@ -63,16 +68,16 @@ func FetchWithString(ctx context.Context, cache Cache, key string, expire time.D
 	return value.(string), nil
 }
 
-func FetchWithProtobuf(ctx context.Context, cache Cache, key string, expire time.Duration, fetcher Fetcher, model interface{}) (proto.Message, error) {
-	value, err := fetch(ctx, cache, key, expire, fetcher, protoEncode, protoDecode(model))
+func FetchWithProtobuf(ctx context.Context, cache Cache, key string, fetcher Fetcher, model interface{}) (proto.Message, error) {
+	value, err := fetch(ctx, cache, key, fetcher, protoEncode, protoDecode(model))
 	if err != nil {
 		return nil, err
 	}
 	return value.(proto.Message), nil
 }
 
-func FetchWithNumber(ctx context.Context, cache Cache, key string, expire time.Duration, fetcher Fetcher) (float64, error) {
-	value, err := fetch(ctx, cache, key, expire, fetcher, func(i interface{}) ([]byte, error) {
+func FetchWithNumber(ctx context.Context, cache Cache, key string, fetcher Fetcher) (float64, error) {
+	value, err := fetch(ctx, cache, key, fetcher, func(i interface{}) ([]byte, error) {
 		if !tools.CanConvertToNumber(i) {
 			return nil, errors.ErrInvalidValue
 		}
@@ -86,8 +91,8 @@ func FetchWithNumber(ctx context.Context, cache Cache, key string, expire time.D
 	return tools.ToFloat(value)
 }
 
-func FetchWithArray(ctx context.Context, cache Cache, key string, expire time.Duration, fetcher Fetcher, model interface{}) (interface{}, error) {
-	return fetch(ctx, cache, key, expire, fetcher, func(i interface{}) ([]byte, error) {
+func FetchWithArray(ctx context.Context, cache Cache, key string, fetcher Fetcher, model interface{}) (interface{}, error) {
+	return fetch(ctx, cache, key, fetcher, func(i interface{}) ([]byte, error) {
 		kind := reflect.TypeOf(i).Kind()
 		if kind != reflect.Slice && kind != reflect.Array {
 			return nil, errors.ErrInvalidValue

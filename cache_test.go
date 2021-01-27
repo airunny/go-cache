@@ -36,16 +36,16 @@ func TestFetchWithJson(t *testing.T) {
 	ctx := context.Background()
 
 	cnt := int32(0)
-	fetchFunc := func() (interface{}, error) {
+	fetchFunc := func() (interface{}, time.Duration, error) {
 		atomic.AddInt32(&cnt, 1)
 		return &TempModel{
 			Name: "peter",
 			Age:  23,
 			Id:   123123,
-		}, nil
+		}, time.Millisecond * 100, nil
 	}
 
-	ret, err := FetchWithJson(ctx, cache, "json-key", time.Millisecond*100, fetchFunc, TempModel{})
+	ret, err := FetchWithJson(ctx, cache, "json-key", fetchFunc, TempModel{})
 	ast.Nil(err)
 	ast.Equal("peter", ret.(*TempModel).Name)
 	ast.EqualValues(23, ret.(*TempModel).Age)
@@ -54,7 +54,7 @@ func TestFetchWithJson(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		// from cache
-		ret, err = FetchWithJson(ctx, cache, "json-key", time.Millisecond*100, fetchFunc, TempModel{})
+		ret, err = FetchWithJson(ctx, cache, "json-key", fetchFunc, TempModel{})
 		ast.Nil(err)
 		ast.Equal("peter", ret.(*TempModel).Name)
 		ast.EqualValues(23, ret.(*TempModel).Age)
@@ -63,7 +63,7 @@ func TestFetchWithJson(t *testing.T) {
 	}
 
 	time.Sleep(100 * time.Millisecond)
-	ret, err = FetchWithJson(ctx, cache, "json-key", time.Millisecond*100, fetchFunc, TempModel{})
+	ret, err = FetchWithJson(ctx, cache, "json-key", fetchFunc, TempModel{})
 	ast.Nil(err)
 	ast.Equal("peter", ret.(*TempModel).Name)
 	ast.EqualValues(23, ret.(*TempModel).Age)
@@ -71,15 +71,15 @@ func TestFetchWithJson(t *testing.T) {
 	ast.EqualValues(2, atomic.LoadInt32(&cnt))
 
 	// WithNoUseCache
-	fetchFunc2 := func() (interface{}, error) {
+	fetchFunc2 := func() (interface{}, time.Duration, error) {
 		atomic.AddInt32(&cnt, 1)
 		return &TempModel{
 			Name: "mary",
 			Age:  24,
 			Id:   123,
-		}, nil
+		}, time.Millisecond * 100, nil
 	}
-	_, err = FetchWithJson(ctx, cache, "json-key", time.Millisecond*100, fetchFunc2, TempModel{})
+	_, err = FetchWithJson(ctx, cache, "json-key", fetchFunc2, TempModel{})
 	ast.Nil(err)
 	ast.Equal("peter", ret.(*TempModel).Name)
 	ast.EqualValues(23, ret.(*TempModel).Age)
@@ -87,14 +87,14 @@ func TestFetchWithJson(t *testing.T) {
 	ast.EqualValues(2, atomic.LoadInt32(&cnt))
 
 	ctx2 := WithNoUseCache(ctx)
-	ret, err = FetchWithJson(ctx2, cache, "json-key", time.Millisecond*100, fetchFunc2, TempModel{})
+	ret, err = FetchWithJson(ctx2, cache, "json-key", fetchFunc2, TempModel{})
 	ast.Nil(err)
 	ast.Equal("mary", ret.(*TempModel).Name)
 	ast.EqualValues(24, ret.(*TempModel).Age)
 	ast.EqualValues(123, ret.(*TempModel).Id)
 	ast.EqualValues(3, atomic.LoadInt32(&cnt))
 
-	ret, err = FetchWithJson(ctx, cache, "json-key", time.Millisecond*100, fetchFunc2, TempModel{})
+	ret, err = FetchWithJson(ctx, cache, "json-key", fetchFunc2, TempModel{})
 	ast.Nil(err)
 	ast.Equal("mary", ret.(*TempModel).Name)
 	ast.EqualValues(24, ret.(*TempModel).Age)
@@ -111,7 +111,7 @@ func TestFetchWithJson2(t *testing.T) {
 	}
 
 	cnt := int32(0)
-	fetchFunc := func() (interface{}, error) {
+	fetchFunc := func() (interface{}, time.Duration, error) {
 		atomic.AddInt32(&cnt, 1)
 		return &tmp{
 			A: []*TempModel{
@@ -126,10 +126,10 @@ func TestFetchWithJson2(t *testing.T) {
 					Id:   123,
 				},
 			},
-		}, nil
+		}, time.Millisecond * 100, nil
 	}
 
-	ret2, err := FetchWithJson(ctx, cache, "json-key1", time.Millisecond*100, fetchFunc, tmp{})
+	ret2, err := FetchWithJson(ctx, cache, "json-key1", fetchFunc, tmp{})
 	ast.Nil(err)
 	ret := ret2.(*tmp)
 	ast.Equal(2, len(ret.A))
@@ -143,7 +143,7 @@ func TestFetchWithJson2(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		// from cache
-		ret2, err = FetchWithJson(ctx, cache, "json-key1", time.Millisecond*100, fetchFunc, tmp{})
+		ret2, err = FetchWithJson(ctx, cache, "json-key1", fetchFunc, tmp{})
 		ast.Nil(err)
 		ret = ret2.(*tmp)
 		ast.Equal(2, len(ret.A))
@@ -157,7 +157,7 @@ func TestFetchWithJson2(t *testing.T) {
 	}
 
 	time.Sleep(100 * time.Millisecond)
-	ret2, err = FetchWithJson(ctx, cache, "json-key1", time.Millisecond*100, fetchFunc, tmp{})
+	ret2, err = FetchWithJson(ctx, cache, "json-key1", fetchFunc, tmp{})
 	ast.Nil(err)
 	ret = ret2.(*tmp)
 	ast.Equal(2, len(ret.A))
@@ -175,47 +175,47 @@ func TestFetchWithString(t *testing.T) {
 	ctx := context.Background()
 
 	cnt := int32(0)
-	fetchFunc := func() (interface{}, error) {
+	fetchFunc := func() (interface{}, time.Duration, error) {
 		atomic.AddInt32(&cnt, 1)
-		return "abc", nil
+		return "abc", time.Millisecond * 100, nil
 	}
 
-	ret, err := FetchWithString(ctx, cache, "string-key", time.Millisecond*100, fetchFunc)
+	ret, err := FetchWithString(ctx, cache, "string-key", fetchFunc)
 	ast.Nil(err)
 	ast.Equal("abc", ret)
 	ast.EqualValues(1, atomic.LoadInt32(&cnt))
 
 	for i := 0; i < 10; i++ {
 		// from cache
-		ret, err = FetchWithString(ctx, cache, "string-key", time.Millisecond*100, fetchFunc)
+		ret, err = FetchWithString(ctx, cache, "string-key", fetchFunc)
 		ast.Nil(err)
 		ast.Equal("abc", ret)
 		ast.EqualValues(1, atomic.LoadInt32(&cnt))
 	}
 
 	time.Sleep(100 * time.Millisecond)
-	ret, err = FetchWithString(ctx, cache, "string-key", time.Millisecond*100, fetchFunc)
+	ret, err = FetchWithString(ctx, cache, "string-key", fetchFunc)
 	ast.Nil(err)
 	ast.Equal("abc", ret)
 	ast.EqualValues(2, atomic.LoadInt32(&cnt))
 
 	// WithNoUseCache
-	fetchFunc2 := func() (interface{}, error) {
+	fetchFunc2 := func() (interface{}, time.Duration, error) {
 		atomic.AddInt32(&cnt, 1)
-		return "cba", nil
+		return "cba", time.Millisecond * 100, nil
 	}
-	_, err = FetchWithString(ctx, cache, "string-key", time.Millisecond*100, fetchFunc2)
+	_, err = FetchWithString(ctx, cache, "string-key", fetchFunc2)
 	ast.Nil(err)
 	ast.Equal("abc", ret)
 	ast.EqualValues(2, atomic.LoadInt32(&cnt))
 
 	ctx2 := WithNoUseCache(ctx)
-	ret, err = FetchWithString(ctx2, cache, "string-key", time.Millisecond*100, fetchFunc2)
+	ret, err = FetchWithString(ctx2, cache, "string-key", fetchFunc2)
 	ast.Nil(err)
 	ast.Equal("cba", ret)
 	ast.EqualValues(3, atomic.LoadInt32(&cnt))
 
-	ret, err = FetchWithString(ctx, cache, "string-key", time.Millisecond*100, fetchFunc2)
+	ret, err = FetchWithString(ctx, cache, "string-key", fetchFunc2)
 	ast.Nil(err)
 	ast.Equal("cba", ret)
 	ast.EqualValues(3, atomic.LoadInt32(&cnt))
@@ -226,15 +226,15 @@ func TestFetchWithProtobuf(t *testing.T) {
 	ctx := context.Background()
 
 	cnt := int32(0)
-	fetchFunc := func() (interface{}, error) {
+	fetchFunc := func() (interface{}, time.Duration, error) {
 		atomic.AddInt32(&cnt, 1)
 		return &TempModelPb{
 			IsMember: true,
 			ExpireAt: 101,
-		}, nil
+		}, time.Millisecond * 100, nil
 	}
 
-	ret, err := FetchWithProtobuf(ctx, cache, "proto-key", time.Millisecond*100, fetchFunc, TempModelPb{})
+	ret, err := FetchWithProtobuf(ctx, cache, "proto-key", fetchFunc, TempModelPb{})
 	ast.Nil(err)
 	ast.True(ret.(*TempModelPb).IsMember)
 	ast.EqualValues(101, ret.(*TempModelPb).ExpireAt)
@@ -242,7 +242,7 @@ func TestFetchWithProtobuf(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		// from cache
-		ret, err = FetchWithProtobuf(ctx, cache, "proto-key", time.Millisecond*100, fetchFunc, TempModelPb{})
+		ret, err = FetchWithProtobuf(ctx, cache, "proto-key", fetchFunc, TempModelPb{})
 		ast.Nil(err)
 		ast.True(ret.(*TempModelPb).IsMember)
 		ast.EqualValues(101, ret.(*TempModelPb).ExpireAt)
@@ -250,7 +250,7 @@ func TestFetchWithProtobuf(t *testing.T) {
 	}
 
 	time.Sleep(100 * time.Millisecond)
-	ret, err = FetchWithProtobuf(ctx, cache, "proto-key", time.Millisecond*100, fetchFunc, TempModelPb{})
+	ret, err = FetchWithProtobuf(ctx, cache, "proto-key", fetchFunc, TempModelPb{})
 	ast.Nil(err)
 	ast.True(ret.(*TempModelPb).IsMember)
 	ast.EqualValues(101, ret.(*TempModelPb).ExpireAt)
@@ -262,47 +262,47 @@ func TestFetchWithNumber(t *testing.T) {
 	ctx := context.Background()
 
 	cnt := int32(0)
-	fetchFunc := func() (interface{}, error) {
+	fetchFunc := func() (interface{}, time.Duration, error) {
 		atomic.AddInt32(&cnt, 1)
-		return int64(9887), nil
+		return int64(9887), time.Millisecond * 100, nil
 	}
 
-	ret, err := FetchWithNumber(ctx, cache, "number-key", time.Millisecond*100, fetchFunc)
+	ret, err := FetchWithNumber(ctx, cache, "number-key", fetchFunc)
 	ast.Nil(err)
 	ast.EqualValues(float64(9887), ret)
 	ast.EqualValues(1, atomic.LoadInt32(&cnt))
 
 	for i := 0; i < 10; i++ {
 		// from cache
-		ret, err = FetchWithNumber(ctx, cache, "number-key", time.Millisecond*100, fetchFunc)
+		ret, err = FetchWithNumber(ctx, cache, "number-key", fetchFunc)
 		ast.Nil(err)
 		ast.EqualValues(float64(9887), ret)
 		ast.EqualValues(1, atomic.LoadInt32(&cnt))
 	}
 
 	time.Sleep(100 * time.Millisecond)
-	ret, err = FetchWithNumber(ctx, cache, "number-key", time.Millisecond*100, fetchFunc)
+	ret, err = FetchWithNumber(ctx, cache, "number-key", fetchFunc)
 	ast.Nil(err)
 	ast.EqualValues(float64(9887), ret)
 	ast.EqualValues(2, atomic.LoadInt32(&cnt))
 
-	fetchFunc2 := func() (interface{}, error) {
+	fetchFunc2 := func() (interface{}, time.Duration, error) {
 		atomic.AddInt32(&cnt, 1)
-		return 1024, nil
+		return 1024, time.Millisecond * 100, nil
 	}
-	_, err = FetchWithNumber(ctx, cache, "number-key", time.Millisecond*100, fetchFunc2)
+	_, err = FetchWithNumber(ctx, cache, "number-key", fetchFunc2)
 	ast.Nil(err)
 	ast.EqualValues(float64(9887), ret)
 	ast.EqualValues(2, atomic.LoadInt32(&cnt))
 
 	// WithNoUseCache
 	ctx2 := WithNoUseCache(ctx)
-	ret, err = FetchWithNumber(ctx2, cache, "number-key", time.Millisecond*100, fetchFunc2)
+	ret, err = FetchWithNumber(ctx2, cache, "number-key", fetchFunc2)
 	ast.Nil(err)
 	ast.EqualValues(float64(1024), ret)
 	ast.EqualValues(3, atomic.LoadInt32(&cnt))
 
-	ret, err = FetchWithNumber(ctx, cache, "number-key", time.Millisecond*100, fetchFunc2)
+	ret, err = FetchWithNumber(ctx, cache, "number-key", fetchFunc2)
 	ast.Nil(err)
 	ast.EqualValues(float64(1024), ret)
 	ast.EqualValues(3, atomic.LoadInt32(&cnt))
@@ -313,7 +313,7 @@ func TestFetchWithArray(t *testing.T) {
 	ctx := context.Background()
 
 	cnt := int32(0)
-	fetchFunc := func() (interface{}, error) {
+	fetchFunc := func() (interface{}, time.Duration, error) {
 		atomic.AddInt32(&cnt, 1)
 		return []*TempModel{
 			{
@@ -326,10 +326,10 @@ func TestFetchWithArray(t *testing.T) {
 				Age:  33,
 				Id:   123,
 			},
-		}, nil
+		}, time.Millisecond * 100, nil
 	}
 
-	ret, err := FetchWithArray(ctx, cache, "array-key", time.Millisecond*100, fetchFunc, []*TempModel{})
+	ret, err := FetchWithArray(ctx, cache, "array-key", fetchFunc, []*TempModel{})
 	ast.Nil(err)
 	value, ok := ret.([]*TempModel)
 	for _, v := range value {
@@ -344,7 +344,7 @@ func TestFetchWithArray(t *testing.T) {
 
 	// from cache
 	for i := 0; i < 10; i++ {
-		ret, err := FetchWithArray(ctx, cache, "array-key", time.Millisecond*100, fetchFunc, []*TempModel{})
+		ret, err := FetchWithArray(ctx, cache, "array-key", fetchFunc, []*TempModel{})
 		ast.Nil(err)
 		value, ok := ret.([]*TempModel)
 		for _, v := range value {
@@ -359,7 +359,7 @@ func TestFetchWithArray(t *testing.T) {
 	}
 
 	time.Sleep(100 * time.Millisecond)
-	ret, err = FetchWithArray(ctx, cache, "array-key", time.Millisecond*100, fetchFunc, []*TempModel{})
+	ret, err = FetchWithArray(ctx, cache, "array-key", fetchFunc, []*TempModel{})
 	ast.Nil(err)
 	value, ok = ret.([]*TempModel)
 	for _, v := range value {
@@ -373,7 +373,7 @@ func TestFetchWithArray(t *testing.T) {
 	ast.True(ok)
 	ast.EqualValues(2, atomic.LoadInt32(&cnt))
 
-	fetchFunc2 := func() (interface{}, error) {
+	fetchFunc2 := func() (interface{}, time.Duration, error) {
 		atomic.AddInt32(&cnt, 1)
 		return []*TempModel{
 			{
@@ -386,9 +386,9 @@ func TestFetchWithArray(t *testing.T) {
 				Age:  333,
 				Id:   1233,
 			},
-		}, nil
+		}, time.Millisecond * 100, nil
 	}
-	_, err = FetchWithArray(ctx, cache, "array-key", time.Millisecond*100, fetchFunc2, []*TempModel{})
+	_, err = FetchWithArray(ctx, cache, "array-key", fetchFunc2, []*TempModel{})
 	ast.Nil(err)
 	value, ok = ret.([]*TempModel)
 	for _, v := range value {
@@ -404,7 +404,7 @@ func TestFetchWithArray(t *testing.T) {
 
 	// WithNoUseCache
 	ctx2 := WithNoUseCache(ctx)
-	ret, err = FetchWithArray(ctx2, cache, "array-key", time.Millisecond*100, fetchFunc2, []*TempModel{})
+	ret, err = FetchWithArray(ctx2, cache, "array-key", fetchFunc2, []*TempModel{})
 	ast.Nil(err)
 	value, ok = ret.([]*TempModel)
 	for _, v := range value {
@@ -418,7 +418,7 @@ func TestFetchWithArray(t *testing.T) {
 	ast.True(ok)
 	ast.EqualValues(3, atomic.LoadInt32(&cnt))
 
-	ret, err = FetchWithArray(ctx, cache, "array-key", time.Millisecond*100, fetchFunc2, []*TempModel{})
+	ret, err = FetchWithArray(ctx, cache, "array-key", fetchFunc2, []*TempModel{})
 	ast.Nil(err)
 	value, ok = ret.([]*TempModel)
 	for _, v := range value {
@@ -438,7 +438,7 @@ func TestFetchWithArray2(t *testing.T) {
 	ctx := context.Background()
 
 	cnt := int32(0)
-	fetchFunc := func() (interface{}, error) {
+	fetchFunc := func() (interface{}, time.Duration, error) {
 		atomic.AddInt32(&cnt, 1)
 		return []string{
 			"1",
@@ -446,10 +446,10 @@ func TestFetchWithArray2(t *testing.T) {
 			"3",
 			"4",
 			"5",
-		}, nil
+		}, time.Millisecond * 100, nil
 	}
 
-	ret, err := FetchWithArray(ctx, cache, "array-key1", time.Millisecond*100, fetchFunc, []string{})
+	ret, err := FetchWithArray(ctx, cache, "array-key1", fetchFunc, []string{})
 	ast.Nil(err)
 	value, ok := ret.([]string)
 	ast.Equal(strings.Join(value, ","), "1,2,3,4,5")
@@ -458,7 +458,7 @@ func TestFetchWithArray2(t *testing.T) {
 
 	// from cache
 	for i := 0; i < 10; i++ {
-		ret, err := FetchWithArray(ctx, cache, "array-key1", time.Millisecond*100, fetchFunc, []string{})
+		ret, err := FetchWithArray(ctx, cache, "array-key1", fetchFunc, []string{})
 		ast.Nil(err)
 		value, ok := ret.([]string)
 		ast.Equal(strings.Join(value, ","), "1,2,3,4,5")
@@ -467,14 +467,14 @@ func TestFetchWithArray2(t *testing.T) {
 	}
 
 	time.Sleep(100 * time.Millisecond)
-	ret, err = FetchWithArray(ctx, cache, "array-key1", time.Millisecond*100, fetchFunc, []string{})
+	ret, err = FetchWithArray(ctx, cache, "array-key1", fetchFunc, []string{})
 	ast.Nil(err)
 	value, ok = ret.([]string)
 	ast.Equal(strings.Join(value, ","), "1,2,3,4,5")
 	ast.Equal(5, len(value))
 	ast.True(ok)
 
-	fetchFunc2 := func() (interface{}, error) {
+	fetchFunc2 := func() (interface{}, time.Duration, error) {
 		atomic.AddInt32(&cnt, 1)
 		return []string{
 			"11",
@@ -482,9 +482,9 @@ func TestFetchWithArray2(t *testing.T) {
 			"33",
 			"44",
 			"55",
-		}, nil
+		}, time.Millisecond * 100, nil
 	}
-	_, err = FetchWithArray(ctx, cache, "array-key1", time.Millisecond*100, fetchFunc2, []string{})
+	_, err = FetchWithArray(ctx, cache, "array-key1", fetchFunc2, []string{})
 	ast.Nil(err)
 	value, ok = ret.([]string)
 	ast.Equal(strings.Join(value, ","), "1,2,3,4,5")
@@ -493,14 +493,14 @@ func TestFetchWithArray2(t *testing.T) {
 
 	// WithNoUseCache
 	ctx2 := WithNoUseCache(ctx)
-	ret, err = FetchWithArray(ctx2, cache, "array-key1", time.Millisecond*100, fetchFunc2, []string{})
+	ret, err = FetchWithArray(ctx2, cache, "array-key1", fetchFunc2, []string{})
 	ast.Nil(err)
 	value, ok = ret.([]string)
 	ast.Equal(strings.Join(value, ","), "11,22,33,44,55")
 	ast.Equal(5, len(value))
 	ast.True(ok)
 
-	ret, err = FetchWithArray(ctx, cache, "array-key1", time.Millisecond*100, fetchFunc2, []string{})
+	ret, err = FetchWithArray(ctx, cache, "array-key1", fetchFunc2, []string{})
 	ast.Nil(err)
 	value, ok = ret.([]string)
 	ast.Equal(strings.Join(value, ","), "11,22,33,44,55")
