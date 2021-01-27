@@ -7,7 +7,7 @@ import (
 
 	"github.com/liyanbing/go-cache/errors"
 
-	redis "gopkg.in/redis.v5"
+	redis "github.com/go-redis/redis/v8"
 )
 
 func NewRedisCache(cli *redis.Client) *Redis {
@@ -32,14 +32,14 @@ func (s *Redis) namespaceKey(key string) string {
 	return fmt.Sprintf("%v:%v", s.namespace, key)
 }
 
-func (s *Redis) Set(_ context.Context, key string, value interface{}, expiration time.Duration) error {
+func (s *Redis) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
 	key = s.namespaceKey(key)
-	return s.cli.Set(key, value, expiration).Err()
+	return s.cli.Set(ctx, key, value, expiration).Err()
 }
 
-func (s *Redis) Get(_ context.Context, key string) (interface{}, error) {
+func (s *Redis) Get(ctx context.Context, key string) (interface{}, error) {
 	key = s.namespaceKey(key)
-	value, err := s.cli.Get(key).Bytes()
+	value, err := s.cli.Get(ctx, key).Bytes()
 	if err != nil {
 		if err == redis.Nil {
 			return nil, errors.ErrEmptyCache
@@ -49,7 +49,7 @@ func (s *Redis) Get(_ context.Context, key string) (interface{}, error) {
 	return value, nil
 }
 
-func (s *Redis) Remove(_ context.Context, key string) error {
+func (s *Redis) Remove(ctx context.Context, key string) error {
 	key = s.namespaceKey(key)
-	return s.cli.Del(key).Err()
+	return s.cli.Del(ctx, key).Err()
 }

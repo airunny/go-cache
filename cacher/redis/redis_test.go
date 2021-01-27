@@ -8,7 +8,7 @@ import (
 	"github.com/liyanbing/go-cache/errors"
 	"github.com/stretchr/testify/assert"
 
-	redis "gopkg.in/redis.v5"
+	redis "github.com/go-redis/redis/v8"
 )
 
 func TestNewRedisCache(t *testing.T) {

@@ -11,8 +11,8 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 
+	redis "github.com/go-redis/redis/v8"
 	redisCache "github.com/liyanbing/go-cache/cacher/redis"
-	redis "gopkg.in/redis.v5"
 )
 
 var cache Cache
