@@ -29,9 +29,9 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
+	redis "github.com/go-redis/redis/v8"
 	go_cache "github.com/liyanbing/go-cache"
 	redis_cacher "github.com/liyanbing/go-cache/cacher/redis"
-	redis "gopkg.in/redis.v5"
 )
 
 type User struct {
@@ -47,12 +47,12 @@ func main() {
 	}))
 
 	// 1、 json
-	temp, err := go_cache.FetchWithJson(context.Background(), cache, "json1", time.Hour, func() (interface{}, error) {
+	temp, err := go_cache.FetchWithJson(context.Background(), cache, "json1", func() (interface{}, time.Duration, error) {
 		return &User{
 			Name: "peter",
 			Age:  23,
 			Id:   123123,
-		}, nil
+		}, time.Hour, nil
 	}, User{})
 	if err != nil {
 		log.Fatal(err)
@@ -61,13 +61,13 @@ func main() {
 	fmt.Println("json:", *ret)
 
 	// 2、json2
-	temp, err = go_cache.FetchWithJson(context.Background(), cache, "json2", time.Hour, func() (interface{}, error) {
+	temp, err = go_cache.FetchWithJson(context.Background(), cache, "json2", func() (interface{}, time.Duration, error) {
 		// 这里返回的不是指针
 		return User{
 			Name: "peter",
 			Age:  23,
 			Id:   123123,
-		}, nil
+		}, time.Hour, nil
 	}, User{})
 	if err != nil {
 		log.Fatal(err)
@@ -84,8 +84,8 @@ func main() {
 	fmt.Println("json:", *ret)
 
 	// 3、string
-	str, err := go_cache.FetchWithString(context.Background(), cache, "string", time.Hour, func() (interface{}, error) {
-		return "golang", nil
+	str, err := go_cache.FetchWithString(context.Background(), cache, "string", func() (interface{}, time.Duration, error) {
+		return "golang", time.Hour, nil
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -93,11 +93,11 @@ func main() {
 	fmt.Println(str)
 
 	// 4、protobuf
-	pro, err := go_cache.FetchWithProtobuf(context.Background(), cache, "protobuf", time.Hour, func() (interface{}, error) {
+	pro, err := go_cache.FetchWithProtobuf(context.Background(), cache, "protobuf", func() (interface{}, time.Duration, error) {
 		return &TempModelPb{
 			IsMember: true,
 			ExpireAt: 19999,
-		}, nil
+		}, time.Hour, nil
 	}, new(TempModelPb))
 	if err != nil {
 		log.Fatal(err)
@@ -106,8 +106,8 @@ func main() {
 	fmt.Println(*proRet)
 
 	// 5、number
-	num, err := go_cache.FetchWithNumber(context.Background(), cache, "number", time.Hour, func() (interface{}, error) {
-		return int64(100), nil
+	num, err := go_cache.FetchWithNumber(context.Background(), cache, "number", func() (interface{}, time.Duration, error) {
+		return int64(100), time.Hour, nil
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -117,8 +117,8 @@ func main() {
 	// 6、number
 	// 也可以通过go_cache.WithNoUseCache来表示不使用缓存直接从fetcher中获取数据，这时候会顺便更新缓存数据
 	ctx := go_cache.WithNoUseCache(context.Background())
-	num, err = go_cache.FetchWithNumber(ctx, cache, "number", time.Hour, func() (interface{}, error) {
-		return 300.02, nil
+	num, err = go_cache.FetchWithNumber(ctx, cache, "number", func() (interface{}, time.Duration, error) {
+		return 300.02, time.Hour, nil
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -126,7 +126,7 @@ func main() {
 	fmt.Println(num)
 
 	// 7、array1
-	arr, err := go_cache.FetchWithArray(context.Background(), cache, "array", time.Hour, func() (interface{}, error) {
+	arr, err := go_cache.FetchWithArray(context.Background(), cache, "array", func() (interface{}, time.Duration, error) {
 		return []*User{
 			{
 				Name: "golang",
@@ -136,7 +136,7 @@ func main() {
 				Name: "java",
 				Age:  10,
 			},
-		}, nil
+		}, time.Hour, nil
 	}, []*User{})
 	if err != nil {
 		log.Fatal(err)
@@ -145,7 +145,7 @@ func main() {
 	fmt.Println(arrRet)
 
 	// 7、array2
-	arr1, err := go_cache.FetchWithArray(context.Background(), cache, "array2", time.Hour, func() (interface{}, error) {
+	arr1, err := go_cache.FetchWithArray(context.Background(), cache, "array2", func() (interface{}, time.Duration, error) {
 		return []*User{
 			{
 				Name: "golang",
@@ -155,7 +155,7 @@ func main() {
 				Name: "java",
 				Age:  10,
 			},
-		}, nil
+		}, time.Hour, nil
 	}, []User{})
 	if err != nil {
 		log.Fatal(err)
@@ -168,7 +168,7 @@ func main() {
 		Users []*User
 	}
 
-	arr3, err := go_cache.FetchWithJson(context.Background(), cache, "array3", time.Hour, func() (interface{}, error) {
+	arr3, err := go_cache.FetchWithJson(context.Background(), cache, "array3", func() (interface{}, time.Duration, error) {
 		return &Temp{
 			Users: []*User{
 				{
@@ -180,7 +180,7 @@ func main() {
 					Age:  10,
 				},
 			},
-		}, nil
+		}, time.Hour, nil
 	}, new(Temp))
 	if err != nil {
 		log.Fatal(err)
