@@ -2,6 +2,8 @@ package go_cache
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"sync/atomic"
@@ -506,6 +508,48 @@ func TestFetchWithArray2(t *testing.T) {
 	ast.Equal(strings.Join(value, ","), "11,22,33,44,55")
 	ast.Equal(5, len(value))
 	ast.True(ok)
+}
+
+func TestFetchIncludeKeys(t *testing.T) {
+	ctx := context.Background()
+	fetchFunc := func() (interface{}, time.Duration, error) {
+		return &TempModel{
+			Name: "peter",
+			Age:  23,
+			Id:   123123,
+		}, time.Millisecond * 100, nil
+	}
+
+	count := 10
+	keys := make([]string, 0, count)
+	for i := 0; i < count; i++ {
+		key := fmt.Sprintf("json-key-%v", i)
+		keys = append(keys, key)
+		ret, err := FetchWithJson(ctx, cache, key, fetchFunc, TempModel{})
+		assert.Nil(t, err)
+		assert.Equal(t, "peter", ret.(*TempModel).Name)
+		assert.EqualValues(t, 23, ret.(*TempModel).Age)
+		assert.EqualValues(t, 123123, ret.(*TempModel).Id)
+	}
+
+	keys = append(keys, "1", "2", "3")
+
+	rets := make([]*TempModel, 0, count)
+	var excludeKeys []interface{}
+	err := FetchWithIncludeKeys(ctx, cache, func(value interface{}) error {
+		ret, ok := value.(*TempModel)
+		if !ok {
+			return errors.New("invalid value")
+		}
+		rets = append(rets, ret)
+		return nil
+	}, func(outerKey string) {
+		excludeKeys = append(excludeKeys, outerKey)
+	}, JsonDecode(TempModel{}), keys...)
+
+	assert.Nil(t, err)
+	assert.Equal(t, count, len(rets))
+	assert.Equal(t, 3, len(excludeKeys))
 }
 
 type TempModelPb struct {

@@ -13,7 +13,7 @@ func fetch(
 	key string,
 	fetcher Fetcher,
 	e encoder,
-	d decoder) (interface{}, error) {
+	d Decoder) (interface{}, error) {
 
 	do := func() (interface{}, error) {
 		return single.Do(key, func() (interface{}, error) {

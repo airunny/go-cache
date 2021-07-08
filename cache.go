@@ -39,6 +39,10 @@ var (
  */
 type Fetcher func() (value interface{}, expiration time.Duration, err error)
 
+type EmptyCache func(outerKey string)
+
+type CacheValueOutput func(value interface{}) error
+
 type Cache interface {
 	// set global namespace
 	SetNamespace(namespace string)
@@ -57,10 +61,11 @@ type Bridge interface {
 	FetchWithProtobuf(ctx context.Context, key string, fetcher Fetcher, model interface{}) (proto.Message, error)
 	FetchWithNumber(ctx context.Context, key string, fetcher Fetcher) (float64, error)
 	FetchWithArray(ctx context.Context, key string, fetcher Fetcher, model interface{}) (interface{}, error)
+	FetchWithIncludeKeys(ctx context.Context, output CacheValueOutput, empty EmptyCache, dec Decoder, otherKeys ...string) error
 }
 
 func FetchWithJson(ctx context.Context, cache Cache, key string, fetcher Fetcher, model interface{}) (interface{}, error) {
-	return fetch(ctx, cache, key, fetcher, jsonEncode, jsonDecode(model))
+	return fetch(ctx, cache, key, fetcher, jsonEncode, JsonDecode(model))
 }
 
 func FetchWithString(ctx context.Context, cache Cache, key string, fetcher Fetcher) (string, error) {
@@ -83,7 +88,7 @@ func FetchWithString(ctx context.Context, cache Cache, key string, fetcher Fetch
 }
 
 func FetchWithProtobuf(ctx context.Context, cache Cache, key string, fetcher Fetcher, model interface{}) (proto.Message, error) {
-	value, err := fetch(ctx, cache, key, fetcher, protoEncode, protoDecode(model))
+	value, err := fetch(ctx, cache, key, fetcher, protoEncode, ProtoDecode(model))
 	if err != nil {
 		return nil, err
 	}
@@ -125,6 +130,31 @@ func FetchWithArray(ctx context.Context, cache Cache, key string, fetcher Fetche
 		}
 		return ret.Elem().Interface(), nil
 	})
+}
+
+// 批量获取otherKeys的缓存数据，如果缓存中不存在则会通过fetcher获取不存在缓存中的数据，通过fetcher获取到的数据不会加入缓存
+func FetchWithIncludeKeys(ctx context.Context, cache Cache, output CacheValueOutput, empty EmptyCache, dec Decoder, otherKeys ...string) error {
+	for _, key := range otherKeys {
+		cachedValue, err := cache.Get(ctx, key)
+		if err == errors.ErrEmptyCache {
+			empty(key)
+			continue
+		}
+		if err != nil {
+			return err
+		}
+
+		value, err := dec(cachedValue)
+		if err != nil {
+			return err
+		}
+
+		err = output(value)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type cacheType int8
@@ -254,4 +284,8 @@ func (c *bridger) FetchWithNumber(ctx context.Context, key string, fetcher Fetch
 
 func (c *bridger) FetchWithArray(ctx context.Context, key string, fetcher Fetcher, model interface{}) (interface{}, error) {
 	return FetchWithArray(ctx, c.Cache, key, fetcher, model)
+}
+
+func (c *bridger) FetchWithIncludeKeys(ctx context.Context, output CacheValueOutput, empty EmptyCache, dec Decoder, otherKeys ...string) error {
+	return FetchWithIncludeKeys(ctx, c.Cache, output, empty, dec, otherKeys...)
 }

@@ -5,10 +5,9 @@ import (
 	"reflect"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/liyanbing/go-cache/errors"
 )
 
-type decoder func(interface{}) (interface{}, error)
+type Decoder func(interface{}) (interface{}, error)
 
 func typeFromModel(model interface{}) reflect.Type {
 	typ := reflect.TypeOf(model)
@@ -18,7 +17,7 @@ func typeFromModel(model interface{}) reflect.Type {
 	return typ
 }
 
-func protoDecode(model interface{}) decoder {
+func ProtoDecode(model interface{}) Decoder {
 	return func(data interface{}) (interface{}, error) {
 		var byteData []byte
 		switch data.(type) {
@@ -27,7 +26,7 @@ func protoDecode(model interface{}) decoder {
 		case string:
 			byteData = []byte(data.(string))
 		default:
-			return nil, errors.ErrInvalidCacheValue
+			return data, nil
 		}
 
 		ret := reflect.New(typeFromModel(model))
@@ -39,7 +38,7 @@ func protoDecode(model interface{}) decoder {
 	}
 }
 
-func jsonDecode(model interface{}) decoder {
+func JsonDecode(model interface{}) Decoder {
 	return func(data interface{}) (interface{}, error) {
 		var byteData []byte
 		switch data.(type) {
@@ -48,7 +47,7 @@ func jsonDecode(model interface{}) decoder {
 		case string:
 			byteData = []byte(data.(string))
 		default:
-			return nil, errors.ErrInvalidCacheValue
+			return data, nil
 		}
 
 		ret := reflect.New(typeFromModel(model))
