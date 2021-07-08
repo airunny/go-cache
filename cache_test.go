@@ -27,7 +27,7 @@ func TestMain(m *testing.M) {
 	cache.SetNamespace("test")
 
 	// memory
-	//cache = memory.NewMemoryCache(10)
+	//bridger = memory.NewMemoryCache(10)
 	os.Exit(m.Run())
 }
 
@@ -53,7 +53,7 @@ func TestFetchWithJson(t *testing.T) {
 	ast.EqualValues(1, atomic.LoadInt32(&cnt))
 
 	for i := 0; i < 10; i++ {
-		// from cache
+		// from bridger
 		ret, err = FetchWithJson(ctx, cache, "json-key", fetchFunc, TempModel{})
 		ast.Nil(err)
 		ast.Equal("peter", ret.(*TempModel).Name)
@@ -142,7 +142,7 @@ func TestFetchWithJson2(t *testing.T) {
 	ast.EqualValues(1, atomic.LoadInt32(&cnt))
 
 	for i := 0; i < 10; i++ {
-		// from cache
+		// from bridger
 		ret2, err = FetchWithJson(ctx, cache, "json-key1", fetchFunc, tmp{})
 		ast.Nil(err)
 		ret = ret2.(*tmp)
@@ -186,7 +186,7 @@ func TestFetchWithString(t *testing.T) {
 	ast.EqualValues(1, atomic.LoadInt32(&cnt))
 
 	for i := 0; i < 10; i++ {
-		// from cache
+		// from bridger
 		ret, err = FetchWithString(ctx, cache, "string-key", fetchFunc)
 		ast.Nil(err)
 		ast.Equal("abc", ret)
@@ -241,7 +241,7 @@ func TestFetchWithProtobuf(t *testing.T) {
 	ast.EqualValues(1, atomic.LoadInt32(&cnt))
 
 	for i := 0; i < 10; i++ {
-		// from cache
+		// from bridger
 		ret, err = FetchWithProtobuf(ctx, cache, "proto-key", fetchFunc, TempModelPb{})
 		ast.Nil(err)
 		ast.True(ret.(*TempModelPb).IsMember)
@@ -273,7 +273,7 @@ func TestFetchWithNumber(t *testing.T) {
 	ast.EqualValues(1, atomic.LoadInt32(&cnt))
 
 	for i := 0; i < 10; i++ {
-		// from cache
+		// from bridger
 		ret, err = FetchWithNumber(ctx, cache, "number-key", fetchFunc)
 		ast.Nil(err)
 		ast.EqualValues(float64(9887), ret)
@@ -342,7 +342,7 @@ func TestFetchWithArray(t *testing.T) {
 	ast.Equal(2, len(value))
 	ast.True(ok)
 
-	// from cache
+	// from bridger
 	for i := 0; i < 10; i++ {
 		ret, err := FetchWithArray(ctx, cache, "array-key", fetchFunc, []*TempModel{})
 		ast.Nil(err)
@@ -456,7 +456,7 @@ func TestFetchWithArray2(t *testing.T) {
 	ast.Equal(5, len(value))
 	ast.True(ok)
 
-	// from cache
+	// from bridger
 	for i := 0; i < 10; i++ {
 		ret, err := FetchWithArray(ctx, cache, "array-key1", fetchFunc, []string{})
 		ast.Nil(err)

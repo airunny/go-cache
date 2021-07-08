@@ -29,7 +29,7 @@ func fetch(
 
 			err = cache.Set(ctx, key, cacheData, expires)
 			if err != nil {
-				log.Printf("set cache <%v,%v> Err:%v", key, value, err)
+				log.Printf("set bridger <%v,%v> Err:%v", key, value, err)
 				err = nil
 			}
 			return value, nil
