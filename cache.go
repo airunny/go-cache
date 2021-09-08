@@ -50,6 +50,7 @@ type Cache interface {
 	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error
 	// get value of key , return errors.ErrEmptyCache if not found key from bridger
 	Get(ctx context.Context, key string) (interface{}, error)
+	MGet(ctx context.Context, keys ...string) ([]interface{}, error)
 	// remove value by key
 	Remove(ctx context.Context, key string) error
 }
@@ -62,6 +63,7 @@ type Bridge interface {
 	FetchWithNumber(ctx context.Context, key string, fetcher Fetcher) (float64, error)
 	FetchWithArray(ctx context.Context, key string, fetcher Fetcher, model interface{}) (interface{}, error)
 	FetchWithIncludeKeys(ctx context.Context, output CacheValueOutput, empty EmptyCache, dec Decoder, otherKeys ...string) error
+	FetchWithKeys(ctx context.Context, keys ...string) ([]interface{}, error)
 }
 
 func FetchWithJson(ctx context.Context, cache Cache, key string, fetcher Fetcher, model interface{}) (interface{}, error) {
@@ -155,6 +157,10 @@ func FetchWithIncludeKeys(ctx context.Context, cache Cache, output CacheValueOut
 		}
 	}
 	return nil
+}
+
+func FetchWithKeys(ctx context.Context, cache Cache, keys ...string) ([]interface{}, error) {
+	return cache.MGet(ctx, keys...)
 }
 
 type cacheType int8
@@ -288,4 +294,8 @@ func (c *bridger) FetchWithArray(ctx context.Context, key string, fetcher Fetche
 
 func (c *bridger) FetchWithIncludeKeys(ctx context.Context, output CacheValueOutput, empty EmptyCache, dec Decoder, otherKeys ...string) error {
 	return FetchWithIncludeKeys(ctx, c.Cache, output, empty, dec, otherKeys...)
+}
+
+func (c *bridger) FetchWithKeys(ctx context.Context, keys ...string) ([]interface{}, error) {
+	return FetchWithKeys(ctx, c.Cache, keys...)
 }

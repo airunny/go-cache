@@ -69,6 +69,19 @@ func (m *Memory) Get(_ context.Context, key string) (interface{}, error) {
 	return value.(*entry).value, nil
 }
 
+func (m *Memory) MGet(_ context.Context, keys ...string) ([]interface{}, error) {
+	values := make([]interface{}, 0, len(keys))
+	for _, key := range keys {
+		value, ok := m.cache.Load(m.namespaceKey(key))
+		if ok {
+			if !m.checkAndDelete(key, value) {
+				values = append(values, value)
+			}
+		}
+	}
+	return values, nil
+}
+
 func (m *Memory) Remove(_ context.Context, key string) error {
 	key = m.namespaceKey(key)
 	m.cache.Delete(key)
