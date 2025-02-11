@@ -57,8 +57,9 @@ func (s *LRU) MGet(_ context.Context, keys ...string) ([]interface{}, error) {
 	return values, nil
 }
 
-func (s *LRU) Remove(_ context.Context, key string) error {
-	key = s.namespaceKey(key)
-	s.cache.Remove(lru.Key(key))
+func (s *LRU) Remove(_ context.Context, key ...string) error {
+	for _, value := range key {
+		s.cache.Remove(lru.Key(s.namespaceKey(value)))
+	}
 	return nil
 }

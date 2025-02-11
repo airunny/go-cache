@@ -65,7 +65,10 @@ func (s *Redis) MGet(ctx context.Context, keys ...string) ([]interface{}, error)
 	return value, nil
 }
 
-func (s *Redis) Remove(ctx context.Context, key string) error {
-	key = s.namespaceKey(key)
-	return s.cli.Del(ctx, key).Err()
+func (s *Redis) Remove(ctx context.Context, key ...string) error {
+	keys := make([]string, 0, len(key))
+	for _, value := range key {
+		keys = append(keys, s.namespaceKey(value))
+	}
+	return s.cli.Del(ctx, keys...).Err()
 }

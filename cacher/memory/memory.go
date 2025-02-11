@@ -82,11 +82,12 @@ func (m *Memory) MGet(_ context.Context, keys ...string) ([]interface{}, error) 
 	return values, nil
 }
 
-func (m *Memory) Remove(_ context.Context, key string) error {
-	key = m.namespaceKey(key)
-	m.cache.Delete(key)
-	if m.MaxEntries > 0 {
-		atomic.AddInt32(&m.entriesNum, -1)
+func (m *Memory) Remove(_ context.Context, key ...string) error {
+	for _, value := range key {
+		m.cache.Delete(m.namespaceKey(value))
+		if m.MaxEntries > 0 {
+			atomic.AddInt32(&m.entriesNum, -1)
+		}
 	}
 	return nil
 }

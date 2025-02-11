@@ -47,7 +47,7 @@ type Cache interface {
 	Get(ctx context.Context, key string) (interface{}, error)
 	MGet(ctx context.Context, keys ...string) ([]interface{}, error)
 	// remove value by key
-	Remove(ctx context.Context, key string) error
+	Remove(ctx context.Context, key ...string) error
 }
 
 func FetchWithJson(ctx context.Context, cache Cache, key string, fetcher Fetcher, model interface{}) (interface{}, error) {
