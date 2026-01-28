@@ -11,10 +11,9 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/stretchr/testify/assert"
-
-	redis "github.com/go-redis/redis/v8"
 	redisCache "github.com/liyanbing/go-cache/cacher/redis"
+	"github.com/redis/go-redis/v9"
+	"github.com/stretchr/testify/assert"
 )
 
 var cache Cache

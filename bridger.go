@@ -4,10 +4,10 @@ import (
 	"context"
 	"log"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/golang/protobuf/proto"
 	"github.com/liyanbing/go-cache/cacher/lru"
 	"github.com/liyanbing/go-cache/cacher/memory"
+	"github.com/redis/go-redis/v9"
 
 	redisCache "github.com/liyanbing/go-cache/cacher/redis"
 )

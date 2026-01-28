@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/liyanbing/go-cache/errors"
+	"github.com/redis/go-redis/v9"
 )
 
 func NewRedisCache(cli redis.Cmdable) *Redis {

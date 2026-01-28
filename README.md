@@ -29,7 +29,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	redis "github.com/go-redis/redis/v8"
+	redis "github.com/redis/go-redis/v9"
 	go_cache "github.com/liyanbing/go-cache"
 	redis_cacher "github.com/liyanbing/go-cache/cacher/redis"
 )
